@@ -1,52 +1,27 @@
-# FoodQueue 🍔
+# FoodQueue
 
-Sistema web local para administrar el menú y los pedidos de un restaurante mientras demuestra, de forma funcional, el uso de **arreglos dinámicos, colas FIFO, colas con prioridad y pilas**.
-
-## Características
-
-- Menú de productos: crear, consultar y desactivar.
-- Pedidos con productos y cantidades.
-- Prioridades: normal, alta y urgente.
-- Procesamiento automático del siguiente pedido.
-- Política anti-inanición: después de 3 prioritarios consecutivos se atiende 1 normal, si existe.
-- Historial de preparados en pila y función **Deshacer último**.
-- Persistencia automática en `data/state.json`.
-- Interfaz web responsive en JavaScript puro.
-- Servidor HTTP en Python, sin dependencias externas.
-- Pruebas unitarias con `unittest`.
+Nuestro sistema consiste en una aplicación web local que permite gestionar las funciones básicas de un restaurante, como administrar el menú y registrar pedidos con diferentes productos, cantidades y prioridades. Emplea estructuras de datos como **arreglos dinámicos, colas FIFO, colas con prioridad y pilas**. Además, evita que los pedidos normales sean desatendidos frente a los prioritarios, permite consultar el historial y deshacer el último pedido preparado.
+- Interfaz hecha en JavaScript, HTML y CSS.
+- Lógica y procesamiento con Python.
 
 ## Estructuras de datos
 
 | Estructura | Implementación Python | Uso | Operación principal |
 |---|---|---|---|
-| Arreglo dinámico | `list` | Menú de productos | `append` amortizado O(1) |
-| Cola | `collections.deque` | Pedidos normales | `append` / `popleft` O(1) |
-| Cola con prioridad | `heapq` | Pedidos alta/urgente | push/pop O(log n) |
-| Pila | `list` | Historial de preparados | `append` / `pop` O(1) |
+| Arreglo dinámico | `list` | Menú de productos | `append` \(O(1)\) |
+| Cola | `collections.deque` | Pedidos normales | `append` / `popleft` \(O(1)\) |
+| Cola con prioridad | `heapq` | Pedidos alta/urgente | `heappush()` / `heappop()` \(O(log n)\) |
+| Pila | `list` | Historial de preparados | `append` / `pop` \(O(1)\) |
 
-> Los diccionarios que aparecen en el servicio son índices auxiliares para acceso O(1) por ID y no reemplazan las estructuras lineales evaluadas.
+En lugar de implementar clases propias para estas estructuras, se utilizaron las implementaciones nativas de Python para aprovechar sus operaciones optimizadas y mantener complejidades temporales constantes \(O(1)\) y logarítmicas \(O(\log n)\), según la operación. Ambas se encuentran entre los órdenes de complejidad más eficientes de la escala Big O, lo que favorece el rendimiento del sistema.
 
 ## Ejecutar
 
-Requisito: Python 3.10 o superior.
-
-```bash
+Para la ejecución se necesita Python 3.10 o superior y ejecutar en la terminal del sistema el siguiente comando:
+```
 python server.py
 ```
-
-Abrir en el navegador:
-
-```text
-http://127.0.0.1:8000
-```
-
-No se requiere `pip install`.
-
-## Ejecutar pruebas
-
-```bash
-python run_tests.py
-```
+Si la ejecución se realiza correctamente, la terminal mostrará la dirección local donde estará disponible la interfaz funcional: _http://127.0.0.1:8000_
 
 ## Estructura del repositorio
 
@@ -80,8 +55,5 @@ FoodQueue/
 
 ## Porcentaje de IA
 
-La versión entregada como base fue generada aproximadamente en **90 % con asistencia de inteligencia artificial** y en **10 % mediante definición/selección humana del problema, requisitos, validación y ajustes de presentación**. Si el estudiante modifica o amplía el código antes de entregar, debe recalcular este porcentaje de forma honesta.
+La versión entregada como base fue generada aproximadamente en **90 % con asistencia de inteligencia artificial** y en **10 % mediante definición/selección humana del problema, requisitos, validación y ajustes de presentación**.
 
-## Licencia académica
-
-Proyecto preparado con fines educativos. Puede adaptarse para la asignatura indicando autores, curso y universidad.
