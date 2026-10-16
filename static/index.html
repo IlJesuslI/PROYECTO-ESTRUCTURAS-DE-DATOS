@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FoodQueue</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">ESTRUCTURAS DE DATOS</p>
+      <h1>FoodQueue</h1>
+      <p class="subtitle">Sistema de pedidos de restaurante</p>
+    </div>
+    <div class="status-pill" id="connectionStatus">Conectando…</div>
+  </header>
+
+  <main class="container">
+    <section class="metrics" aria-label="Resumen del sistema">
+      <article class="metric"><span>Productos</span><strong id="mProducts">0</strong></article>
+      <article class="metric"><span>Pendientes</span><strong id="mPending">0</strong></article>
+      <article class="metric"><span>Preparados</span><strong id="mPrepared">0</strong></article>
+      <article class="metric"><span>Prioritarios</span><strong id="mPriority">0</strong></article>
+    </section>
+
+    <nav class="tabs" aria-label="Secciones">
+      <button class="tab active" data-tab="orders">Pedidos</button>
+      <button class="tab" data-tab="menu">Menú</button>
+      <button class="tab" data-tab="history">Historial</button>
+      <button class="tab" data-tab="about">Estructuras</button>
+    </nav>
+
+    <section id="orders" class="panel tab-panel active">
+      <div class="panel-grid">
+        <article class="card">
+          <div class="card-header">
+            <div><p class="eyebrow">NUEVO</p><h2>Registrar pedido</h2></div>
+          </div>
+          <form id="orderForm">
+            <label>Cliente<input id="customer" maxlength="80" required placeholder="Ej. Laura"></label>
+            <label>Prioridad
+              <select id="priority">
+                <option value="0">Normal — FIFO</option>
+                <option value="1">Alta</option>
+                <option value="2">Urgente</option>
+              </select>
+            </label>
+            <div class="field-label">Productos</div>
+            <div id="orderProducts" class="product-picker"></div>
+            <div class="order-total"><span>Total estimado</span><strong id="orderTotal">$0</strong></div>
+            <button class="primary full" type="submit">Agregar pedido a la cola</button>
+          </form>
+        </article>
+
+        <article class="card wide">
+          <div class="card-header actions-row">
+            <div><p class="eyebrow">COCINA</p><h2>Pedidos pendientes</h2></div>
+            <button id="processNext" class="primary">Preparar siguiente</button>
+          </div>
+          <p class="hint">Los urgentes y altos usan cola con prioridad. Después de 3 prioritarios consecutivos, se atiende un pedido normal si existe.</p>
+          <div id="pendingOrders" class="order-list empty-state">No hay pedidos pendientes.</div>
+        </article>
+      </div>
+    </section>
+
+    <section id="menu" class="panel tab-panel">
+      <div class="panel-grid">
+        <article class="card">
+          <p class="eyebrow">ARREGLO DINÁMICO</p>
+          <h2>Agregar producto</h2>
+          <form id="productForm">
+            <label>Nombre<input id="productName" maxlength="80" required placeholder="Ej. Perro caliente"></label>
+            <label>Precio COP<input id="productPrice" type="number" min="1" max="50000000" step="1" required placeholder="12000"></label>
+            <button class="primary full" type="submit">Guardar producto</button>
+          </form>
+        </article>
+        <article class="card wide">
+          <p class="eyebrow">CATÁLOGO</p>
+          <h2>Menú activo</h2>
+          <div id="menuList" class="menu-list"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="history" class="panel tab-panel">
+      <article class="card">
+        <div class="card-header actions-row">
+          <div><p class="eyebrow">PILA LIFO</p><h2>Últimos preparados</h2></div>
+          <button id="undoPrepared" class="secondary">Deshacer último</button>
+        </div>
+        <p class="hint">“Deshacer” extrae el elemento superior de la pila y lo devuelve a la cola correspondiente.</p>
+        <div id="historyList" class="order-list empty-state">Aún no hay pedidos preparados.</div>
+      </article>
+    </section>
+
+    <section id="about" class="panel tab-panel">
+      <article class="card structures">
+        <p class="eyebrow">DISEÑO</p>
+        <h2>Cómo se usan las estructuras</h2>
+        <div class="structure-grid">
+          <div><span class="badge">list</span><h3>Arreglo dinámico</h3><p>Almacena el menú. Permite crecer sin definir un tamaño fijo y recorrer productos en orden.</p></div>
+          <div><span class="badge">deque</span><h3>Cola FIFO</h3><p>Conserva los pedidos normales: el primero que llega es el primero que se prepara.</p></div>
+          <div><span class="badge">heapq</span><h3>Cola con prioridad</h3><p>Da preferencia a pedidos urgentes/altos con costo O(log n) al insertar o extraer.</p></div>
+          <div><span class="badge">list</span><h3>Pila LIFO</h3><p>Guarda pedidos preparados y permite deshacer primero el último que fue procesado.</p></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
