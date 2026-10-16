@@ -8,12 +8,12 @@ Nuestro sistema consiste en una aplicación web local que permite gestionar las 
 
 | Estructura | Implementación Python | Uso | Operación principal |
 |---|---|---|---|
-| Arreglo dinámico | `list` | Menú de productos | `append` \(O(1)\) |
-| Cola | `collections.deque` | Pedidos normales | `append` / `popleft` \(O(1)\) |
-| Cola con prioridad | `heapq` | Pedidos alta/urgente | `heappush()` / `heappop()` \(O(log n)\) |
-| Pila | `list` | Historial de preparados | `append` / `pop` \(O(1)\) |
+| Arreglo dinámico | `list` | Menú de productos | `append` _O(1)_ |
+| Cola | `collections.deque` | Pedidos normales | `append` / `popleft` _O(1)_ |
+| Cola con prioridad | `heapq` | Pedidos alta/urgente | `heappush()` / `heappop()` _O(log n)_ |
+| Pila | `list` | Historial de preparados | `append` / `pop` _O(1)_ |
 
-En lugar de implementar clases propias para estas estructuras, se utilizaron las implementaciones nativas de Python para aprovechar sus operaciones optimizadas y mantener complejidades temporales constantes \(O(1)\) y logarítmicas \(O(\log n)\), según la operación. Ambas se encuentran entre los órdenes de complejidad más eficientes de la escala Big O, lo que favorece el rendimiento del sistema
+En lugar de implementar clases propias para estas estructuras, se utilizaron las implementaciones nativas de Python para aprovechar sus operaciones optimizadas y mantener complejidades temporales constantes _O(1)_ y logarítmicas _O(log n)_, según la operación. Ambas se encuentran entre los órdenes de complejidad más eficientes de la escala Big O, lo que favorece el rendimiento del sistema.
 
 ## Ejecutar
 
