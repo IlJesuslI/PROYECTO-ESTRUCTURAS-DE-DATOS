@@ -13,7 +13,7 @@ Nuestro sistema consiste en una aplicación web local que permite gestionar las 
 | Cola con prioridad | `heapq` | Pedidos alta/urgente | `heappush()` / `heappop()` \(O(log n)\) |
 | Pila | `list` | Historial de preparados | `append` / `pop` \(O(1)\) |
 
-En lugar de implementar clases propias para estas estructuras, se utilizaron las implementaciones nativas de Python para aprovechar sus operaciones optimizadas y mantener complejidades temporales constantes \(O(1)\) y logarítmicas \(O(\log n)\), según la operación. Ambas se encuentran entre los órdenes de complejidad más eficientes de la escala Big O, lo que favorece el rendimiento del sistema.
+En lugar de implementar clases propias para estas estructuras, se utilizaron las implementaciones nativas de Python para aprovechar sus operaciones optimizadas y mantener complejidades temporales constantes \(O(1)\) y logarítmicas \(O(\log n)\), según la operación. Ambas se encuentran entre los órdenes de complejidad más eficientes de la escala Big O, lo que favorece el rendimiento del sistema
 
 ## Ejecutar
 
