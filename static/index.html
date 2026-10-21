@@ -35,13 +35,13 @@
       <div class="panel-grid">
         <article class="card">
           <div class="card-header">
-            <div><p class="eyebrow">NUEVO</p><h2>Registrar pedido</h2></div>
+            <div><h2>Registrar pedido</h2></div>
           </div>
           <form id="orderForm">
             <label>Cliente<input id="customer" maxlength="80" required placeholder="Ej. Laura"></label>
             <label>Prioridad
               <select id="priority">
-                <option value="0">Normal — FIFO</option>
+                <option value="0">Normal</option>
                 <option value="1">Alta</option>
                 <option value="2">Urgente</option>
               </select>
@@ -55,7 +55,7 @@
 
         <article class="card wide">
           <div class="card-header actions-row">
-            <div><p class="eyebrow">COCINA</p><h2>Pedidos pendientes</h2></div>
+            <div><h2>Pedidos pendientes</h2></div>
             <button id="processNext" class="primary">Preparar siguiente</button>
           </div>
           <p class="hint">Los urgentes y altos usan cola con prioridad. Después de 3 prioritarios consecutivos, se atiende un pedido normal si existe.</p>
@@ -67,7 +67,6 @@
     <section id="menu" class="panel tab-panel">
       <div class="panel-grid">
         <article class="card">
-          <p class="eyebrow">ARREGLO DINÁMICO</p>
           <h2>Agregar producto</h2>
           <form id="productForm">
             <label>Nombre<input id="productName" maxlength="80" required placeholder="Ej. Perro caliente"></label>
@@ -76,8 +75,7 @@
           </form>
         </article>
         <article class="card wide">
-          <p class="eyebrow">CATÁLOGO</p>
-          <h2>Menú activo</h2>
+          <h2>Catálogo</h2>
           <div id="menuList" class="menu-list"></div>
         </article>
       </div>
@@ -86,7 +84,7 @@
     <section id="history" class="panel tab-panel">
       <article class="card">
         <div class="card-header actions-row">
-          <div><p class="eyebrow">PILA LIFO</p><h2>Últimos preparados</h2></div>
+          <div><h2>Últimos preparados</h2></div>
           <button id="undoPrepared" class="secondary">Deshacer último</button>
         </div>
         <p class="hint">“Deshacer” extrae el elemento superior de la pila y lo devuelve a la cola correspondiente.</p>
