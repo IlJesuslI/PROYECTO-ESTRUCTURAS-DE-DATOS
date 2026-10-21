@@ -44,27 +44,17 @@ Máximo 3 pedidos prioritarios consecutivos si existen normales esperando.
 ### 1. Archivo JSON muy grande — riesgo principal
 Cada alta, cancelación o preparación serializa nuevamente productos + todos los pedidos. Con decenas o cientos de miles de pedidos, la latencia y uso de memoria aumentarán de forma lineal.
 
-**Escalamiento recomendado:** migrar persistencia a SQLite para un solo equipo o PostgreSQL para varios usuarios, manteniendo en memoria `deque`, `heapq` y la pila solo para pedidos activos.
-
 ### 2. Memoria RAM
 Todos los pedidos se mantienen en el diccionario `orders`, y las estructuras activas están en memoria. Con millones de pedidos, no es adecuado.
-
-**Mejora:** archivar pedidos preparados antiguos en base de datos y mantener en RAM solo una ventana reciente.
 
 ### 3. Un solo proceso
 `RLock` protege hilos del mismo proceso, pero no coordina dos instancias independientes de `server.py` escribiendo el mismo archivo.
 
-**Regla:** ejecutar una sola instancia. Para despliegue real, usar base de datos transaccional.
-
 ### 4. Durabilidad frente a fallo eléctrico extremo
 `os.replace` evita archivos parciales, pero no garantiza por sí solo sincronización física (`fsync`) ante pérdida instantánea de energía.
 
-**Mejora:** base de datos con WAL/journaling o añadir `fsync` al archivo y directorio.
-
 ### 5. Prioridades mal usadas
 Si un usuario marca todo como “urgente”, la prioridad pierde significado. El algoritmo no puede inferir si la prioridad es legítima.
-
-**Mejora:** restringir el permiso de asignar prioridad o registrar auditoría.
 
 ### 6. Cantidades duplicadas desde un cliente manipulado
 La API consolida líneas repetidas por `product_id` y vuelve a validar el total. No confía solo en JavaScript.

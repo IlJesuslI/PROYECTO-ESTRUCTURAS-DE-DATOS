@@ -1,2 +1,0 @@
-# FoodQueue usa únicamente la biblioteca estándar de Python.
-# No es necesario instalar dependencias externas.

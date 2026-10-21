@@ -4,54 +4,12 @@ Nuestro sistema consiste en una aplicación web local que permite gestionar las 
 - Interfaz hecha en JavaScript, HTML y CSS.
 - Lógica y procesamiento con Python.
 
-## Estructuras de datos
+## Requisitos
 
-| Estructura | Implementación Python | Uso | Operación principal |
-|---|---|---|---|
-| Arreglo dinámico | `list` | Menú de productos | `append` _O(1)_ |
-| Cola | `collections.deque` | Pedidos normales | `append` / `popleft` _O(1)_ |
-| Cola con prioridad | `heapq` | Pedidos alta/urgente | `heappush()` / `heappop()` _O(log n)_ |
-| Pila | `list` | Historial de preparados | `append` / `pop` _O(1)_ |
-
-En lugar de implementar clases propias para estas estructuras, se utilizaron las implementaciones nativas de Python para aprovechar sus operaciones optimizadas y mantener complejidades temporales constantes _O(1)_ y logarítmicas _O(log n)_, según la operación. Ambas se encuentran entre los órdenes de complejidad más eficientes de la escala Big O, lo que favorece el rendimiento del sistema.
-
-## Ejecutar
-
-Para la ejecución se necesita Python 3.10 o superior y ejecutar en la terminal del sistema el siguiente comando:
-```
-python server.py
-```
-Si la ejecución se realiza correctamente, la terminal mostrará la dirección local donde estará disponible la interfaz funcional: _http://127.0.0.1:8000_
-
-## Estructura del repositorio
-
-```text
-FoodQueue/
-├── app/
-│   ├── models.py
-│   └── service.py
-├── static/
-│   ├── index.html
-│   ├── styles.css
-│   └── app.js
-├── tests/
-│   └── test_service.py
-├── data/
-├── docs/
-│   ├── MANUAL_USUARIO.md
-│   ├── ESTRUCTURAS_DATOS.md
-│   ├── ANALISIS_RIESGOS_Y_LIMITES.md
-│   ├── INDICE_FUNCIONAMIENTO.md
-│   ├── API.md
-│   ├── ENTREGA_PROYECTO.md
-│   └── GUION_VIDEO_5_MIN.md
-├── .github/workflows/tests.yml
-├── server.py
-├── run_tests.py
-├── benchmark.py
-├── requirements.txt
-└── README.md
-```
+- **Python:** versión 3.10 o superior.
+- **Navegador web:** uno moderno compatible con HTML, CSS y JavaScript.
+- **Dependencias:** no requiere instalar bibliotecas externas de Python, ya que utiliza módulos de la biblioteca estándar.
+- **Almacenamiento:** permisos de lectura y escritura en el directorio del proyecto para guardar los datos en formato JSON.
 
 ## Porcentaje de IA
 

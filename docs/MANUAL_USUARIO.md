@@ -14,6 +14,10 @@
    ```bash
    python server.py
    ```
+   o,
+   ```bash
+   py server.py
+   ```
 
 3. Abrir `http://127.0.0.1:8000` en el navegador.
 4. Para cerrar, volver a la terminal y presionar `Ctrl+C`.
