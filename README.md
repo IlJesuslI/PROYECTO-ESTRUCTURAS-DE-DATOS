@@ -45,3 +45,8 @@ Los resultados pueden variar según las características del equipo y las condic
 
 La versión entregada como base fue generada aproximadamente en **90 % con asistencia de inteligencia artificial** y en **10 % mediante definición/selección humana del problema, requisitos, validación y ajustes de presentación**.
 
+
+## Hecho por:
+- Jesus David Muñoz Gomez
+- Edwin Mauricio Cifuentes Monterrey
+- Jacobo Atahualpa Manrique Monroy
