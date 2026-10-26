@@ -3,110 +3,86 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FoodQueue</title>
+  <meta name="theme-color" content="#111b29">
+  <meta name="description" content="FoodQueue: gestión rápida de pedidos de restaurante">
+  <title>FoodQueue | Panel de restaurante</title>
   <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">ESTRUCTURAS DE DATOS</p>
-      <h1>FoodQueue</h1>
-      <p class="subtitle">Sistema de pedidos de restaurante</p>
-    </div>
-    <div class="status-pill" id="connectionStatus">Conectando…</div>
-  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Inicio de FoodQueue"><span class="brand-icon" aria-hidden="true">F<span>Q</span></span><span>FoodQueue<small>RESTAURANT OS</small></span></a>
+      <div class="sidebar-label">ESPACIO DE TRABAJO</div>
+      <nav class="navigation" aria-label="Secciones del panel">
+        <button class="nav-link active" type="button" data-tab="orders"><span class="nav-icon">◫</span><span>Pedidos</span></button>
+        <button class="nav-link" type="button" data-tab="menu"><span class="nav-icon">▦</span><span>Menú</span></button>
+        <button class="nav-link" type="button" data-tab="history"><span class="nav-icon">◷</span><span>Historial</span></button>
+      </nav>
+      <div class="sidebar-bottom"><span class="connection-dot" id="connectionDot"></span><span id="connectionStatus">Conectando…</span><small>v3.0 · SQLite</small></div>
+    </aside>
 
-  <main class="container">
-    <section class="metrics" aria-label="Resumen del sistema">
-      <article class="metric"><span>Productos</span><strong id="mProducts">0</strong></article>
-      <article class="metric"><span>Pendientes</span><strong id="mPending">0</strong></article>
-      <article class="metric"><span>Preparados</span><strong id="mPrepared">0</strong></article>
-      <article class="metric"><span>Prioritarios</span><strong id="mPriority">0</strong></article>
-    </section>
+    <main class="main-content">
+      <header class="page-header">
+        <div><p class="overline">CONTROL OPERATIVO</p><h1>Gestión de pedidos <span class="accent">●</span></h1><p class="page-subtitle">Organiza tu servicio, prioriza pedidos y mantén todo bajo control.</p></div>
+        <div class="header-time"><span class="clock-caption">FECHA Y HORA</span><strong id="liveClock">—</strong></div>
+      </header>
 
-    <nav class="tabs" aria-label="Secciones">
-      <button class="tab active" data-tab="orders">Pedidos</button>
-      <button class="tab" data-tab="menu">Menú</button>
-      <button class="tab" data-tab="history">Historial</button>
-      <button class="tab" data-tab="about">Estructuras</button>
-    </nav>
+      <section class="metrics" aria-label="Resumen de actividad">
+        <article class="metric"><div class="metric-top"><span>Productos activos</span><span class="metric-icon orange">▦</span></div><strong id="mProducts">—</strong><small>Disponibles en el menú</small></article>
+        <article class="metric"><div class="metric-top"><span>Por preparar</span><span class="metric-icon blue">◷</span></div><strong id="mPending">—</strong><small>En espera de atención</small></article>
+        <article class="metric"><div class="metric-top"><span>Preparados</span><span class="metric-icon green">✓</span></div><strong id="mPrepared">—</strong><small>Registros en el historial</small></article>
+        <article class="metric"><div class="metric-top"><span>Prioridad alta</span><span class="metric-icon red">↑</span></div><strong id="mPriority">—</strong><small>En cola prioritaria</small></article>
+      </section>
 
-    <section id="orders" class="panel tab-panel active">
-      <div class="panel-grid">
-        <article class="card">
-          <div class="card-header">
-            <div><h2>Registrar pedido</h2></div>
-          </div>
-          <form id="orderForm">
-            <label>Cliente<input id="customer" maxlength="80" required placeholder="Ej. Laura"></label>
-            <label>Prioridad
-              <select id="priority">
-                <option value="0">Normal</option>
-                <option value="1">Alta</option>
-                <option value="2">Urgente</option>
-              </select>
-            </label>
-            <div class="field-label">Productos</div>
-            <div id="orderProducts" class="product-picker"></div>
-            <div class="order-total"><span>Total estimado</span><strong id="orderTotal">$0</strong></div>
-            <button class="primary full" type="submit">Agregar pedido a la cola</button>
-          </form>
-        </article>
-
-        <article class="card wide">
-          <div class="card-header actions-row">
-            <div><h2>Pedidos pendientes</h2></div>
-            <button id="processNext" class="primary">Preparar siguiente</button>
-          </div>
-          <p class="hint">Los urgentes y altos usan cola con prioridad. Después de 3 prioritarios consecutivos, se atiende un pedido normal si existe.</p>
-          <div id="pendingOrders" class="order-list empty-state">No hay pedidos pendientes.</div>
-        </article>
-      </div>
-    </section>
-
-    <section id="menu" class="panel tab-panel">
-      <div class="panel-grid">
-        <article class="card">
-          <h2>Agregar producto</h2>
-          <form id="productForm">
-            <label>Nombre<input id="productName" maxlength="80" required placeholder="Ej. Perro caliente"></label>
-            <label>Precio COP<input id="productPrice" type="number" min="1" max="50000000" step="1" required placeholder="12000"></label>
-            <button class="primary full" type="submit">Guardar producto</button>
-          </form>
-        </article>
-        <article class="card wide">
-          <h2>Catálogo</h2>
-          <div id="menuList" class="menu-list"></div>
-        </article>
-      </div>
-    </section>
-
-    <section id="history" class="panel tab-panel">
-      <article class="card">
-        <div class="card-header actions-row">
-          <div><h2>Últimos preparados</h2></div>
-          <button id="undoPrepared" class="secondary">Deshacer último</button>
+      <section class="tab-panel active" id="orders" aria-labelledby="ordersHeading">
+        <div class="section-heading"><div><p class="overline">CENTRO DE OPERACIONES</p><h2 id="ordersHeading">Pedidos en tiempo real</h2></div><span class="section-note">Atención por turnos · Alta / Normal</span></div>
+        <div class="content-grid">
+          <article class="surface create-order">
+            <div class="surface-heading"><div class="heading-symbol">＋</div><div><h3>Nuevo pedido</h3><p>Completa los datos para enviarlo a cocina.</p></div></div>
+            <form id="orderForm">
+              <label for="customer">Nombre del cliente</label>
+              <input id="customer" maxlength="80" required autocomplete="off" placeholder="Ej. Camila Rodríguez">
+              <label for="priority">Tipo de prioridad</label>
+              <select id="priority"><option value="0">Normal · Orden de llegada</option><option value="1">Alta · Atención preferente</option></select>
+              <div class="form-row-header"><label>Productos</label><span class="tiny">Selecciona cantidades</span></div>
+              <div id="orderProducts" class="product-picker"></div>
+              <div class="total-line"><span>Total del pedido</span><strong id="orderTotal">$ 0</strong></div>
+              <button class="btn btn-primary btn-wide" type="submit"><span>＋</span> Crear pedido</button>
+            </form>
+          </article>
+          <article class="surface pending-section">
+            <div class="surface-heading between"><div class="surface-title"><div class="heading-symbol heading-symbol-blue">≡</div><div><h3>Cola de preparación</h3><p>Orden de atención según prioridad y llegada.</p></div></div><button id="processNext" class="btn btn-primary" type="button">✓ Preparar siguiente</button></div>
+            <div class="queue-explanation"><span class="info-circle">i</span><span>Se atienden hasta <b>3 pedidos de prioridad alta</b> consecutivos antes de dar turno a uno normal, si lo hay.</span></div>
+            <div class="list-header"><span>PRÓXIMOS PEDIDOS</span><span id="pendingCounter">0 registros</span></div>
+            <div id="pendingOrders" class="order-list"></div>
+            <p class="limit-info" id="pendingLimitNotice" hidden>Se muestran los primeros 60 pedidos en orden de atención.</p>
+          </article>
         </div>
-        <p class="hint">“Deshacer” extrae el elemento superior de la pila y lo devuelve a la cola correspondiente.</p>
-        <div id="historyList" class="order-list empty-state">Aún no hay pedidos preparados.</div>
-      </article>
-    </section>
+      </section>
 
-    <section id="about" class="panel tab-panel">
-      <article class="card structures">
-        <p class="eyebrow">DISEÑO</p>
-        <h2>Cómo se usan las estructuras</h2>
-        <div class="structure-grid">
-          <div><span class="badge">list</span><h3>Arreglo dinámico</h3><p>Almacena el menú. Permite crecer sin definir un tamaño fijo y recorrer productos en orden.</p></div>
-          <div><span class="badge">deque</span><h3>Cola FIFO</h3><p>Conserva los pedidos normales: el primero que llega es el primero que se prepara.</p></div>
-          <div><span class="badge">heapq</span><h3>Cola con prioridad</h3><p>Da preferencia a pedidos urgentes/altos con costo O(log n) al insertar o extraer.</p></div>
-          <div><span class="badge">list</span><h3>Pila LIFO</h3><p>Guarda pedidos preparados y permite deshacer primero el último que fue procesado.</p></div>
+      <section class="tab-panel" id="menu" aria-labelledby="menuHeading">
+        <div class="section-heading"><div><p class="overline">CATÁLOGO</p><h2 id="menuHeading">Menú del restaurante</h2></div></div>
+        <div class="content-grid">
+          <article class="surface"><div class="surface-heading"><div class="heading-symbol">＋</div><div><h3>Agregar producto</h3><p>Amplía las opciones disponibles para tus clientes.</p></div></div>
+            <form id="productForm"><label for="productName">Nombre del producto</label><input id="productName" maxlength="80" required placeholder="Ej. Hamburguesa doble"><label for="productPrice">Precio en pesos colombianos</label><input id="productPrice" type="number" min="1" max="50000000" step="1" required placeholder="25000"><button class="btn btn-primary btn-wide" type="submit">＋ Guardar producto</button></form>
+          </article>
+          <article class="surface"><div class="surface-heading"><div class="heading-symbol heading-symbol-blue">▦</div><div><h3>Productos activos</h3><p>Edita precios o desactiva productos que no ofreces.</p></div></div><div id="menuList" class="menu-list"></div></article>
         </div>
-      </article>
-    </section>
-  </main>
+      </section>
 
+      <section class="tab-panel" id="history" aria-labelledby="historyHeading">
+        <div class="section-heading"><div><p class="overline">REGISTROS</p><h2 id="historyHeading">Historial de preparados</h2></div></div>
+        <article class="surface history-section">
+          <div class="surface-heading between"><div class="surface-title"><div class="heading-symbol heading-symbol-green">◷</div><div><h3>Últimos pedidos preparados</h3><p>El historial se presenta desde el más reciente.</p></div></div><button id="clearHistory" class="btn btn-danger-outline" type="button">🗑 Borrar historial</button></div>
+          <div class="delete-note"><span class="info-circle">!</span> Eliminar es irreversible. Puedes borrar un registro individual o todo el historial; los pedidos pendientes no se modifican.</div>
+          <div id="historyList" class="order-list history-grid"></div>
+          <div class="pagination"><span id="historyCounter">0 registros</span><button id="loadMoreHistory" class="btn btn-outline" type="button" hidden>Ver más pedidos</button></div>
+        </article>
+      </section>
+      <footer class="footer">FoodQueue · Gestión inteligente de pedidos · Python + JavaScript + SQLite</footer>
+    </main>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js" defer></script>
 </body>
 </html>

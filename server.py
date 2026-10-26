@@ -96,11 +96,12 @@ class FoodQueueHandler(BaseHTTPRequestHandler):
                     {"ok": True, "data": SERVICE.list_products(include_inactive)},
                 )
             elif path == "/api/orders/pending":
-                self._json(HTTPStatus.OK, {"ok": True, "data": SERVICE.list_pending_orders()})
+                self._json(HTTPStatus.OK, {"ok": True, "data": SERVICE.list_pending_orders(int(parse_qs(parsed.query).get("limit", ["60"])[0]))})
             elif path == "/api/history":
                 query = parse_qs(parsed.query)
                 limit = int(query.get("limit", ["50"])[0])
-                self._json(HTTPStatus.OK, {"ok": True, "data": SERVICE.list_history(limit)})
+                offset = int(query.get("offset", ["0"])[0])
+                self._json(HTTPStatus.OK, {"ok": True, "data": SERVICE.list_history(limit, offset)})
             elif path.startswith("/api/"):
                 self._error(HTTPStatus.NOT_FOUND, "Endpoint no encontrado.")
             else:
@@ -122,9 +123,6 @@ class FoodQueueHandler(BaseHTTPRequestHandler):
                 self._json(HTTPStatus.CREATED, {"ok": True, "data": result})
             elif path == "/api/orders/process-next":
                 result = SERVICE.process_next_order()
-                self._json(HTTPStatus.OK, {"ok": True, "data": result})
-            elif path == "/api/history/undo":
-                result = SERVICE.undo_last_prepared()
                 self._json(HTTPStatus.OK, {"ok": True, "data": result})
             elif match := re.fullmatch(r"/api/orders/([0-9a-f-]+)/cancel", path):
                 result = SERVICE.cancel_order(match.group(1))
@@ -163,6 +161,14 @@ class FoodQueueHandler(BaseHTTPRequestHandler):
     def do_DELETE(self) -> None:  # noqa: N802
         path = urlparse(self.path).path.rstrip("/")
         try:
+            if path == "/api/history":
+                count = SERVICE.clear_history()
+                self._json(HTTPStatus.OK, {"ok": True, "data": {"deleted": count}})
+                return
+            if match := re.fullmatch(r"/api/history/([0-9a-f-]+)", path):
+                result = SERVICE.delete_history_order(match.group(1))
+                self._json(HTTPStatus.OK, {"ok": True, "data": result})
+                return
             match = re.fullmatch(r"/api/products/([0-9a-f-]+)", path)
             if not match:
                 self._error(HTTPStatus.NOT_FOUND, "Endpoint no encontrado.")
@@ -171,6 +177,8 @@ class FoodQueueHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK, {"ok": True, "data": result})
         except NotFoundError as exc:
             self._error(HTTPStatus.NOT_FOUND, str(exc))
+        except ConflictError as exc:
+            self._error(HTTPStatus.CONFLICT, str(exc))
         except Exception as exc:
             print(f"Error interno: {exc!r}")
             self._error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor.")

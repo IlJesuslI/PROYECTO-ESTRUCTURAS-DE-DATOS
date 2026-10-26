@@ -1,13 +1,8 @@
-"""Benchmark simple de FoodQueue con persistencia real JSON.
+"""Benchmark repetible: registro masivo y extracción individual con SQLite.
 
-Ejemplo:
-    python benchmark.py 1000
-
-Mide el costo acumulado de crear pedidos incluyendo guardado en disco.
+Uso: python benchmark.py 100000
+La duración en Windows puede ser diferente a otros sistemas.
 """
-
-from __future__ import annotations
-
 import argparse
 import tempfile
 import time
@@ -16,36 +11,36 @@ from pathlib import Path
 from app.service import FoodQueueService
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("orders", type=int, nargs="?", default=1000)
+def main():
+    parser = argparse.ArgumentParser(description='Benchmark FoodQueue con arreglos de prioridad')
+    parser.add_argument('orders', type=int, nargs='?', default=1000)
     args = parser.parse_args()
     if not 1 <= args.orders <= 100_000:
-        raise SystemExit("Use un valor entre 1 y 100000.")
-
+        parser.error('Indique una cantidad entre 1 y 100000.')
     with tempfile.TemporaryDirectory() as directory:
-        state_path = Path(directory) / "state.json"
-        service = FoodQueueService(state_path)
+        service = FoodQueueService(Path(directory)/'state.json')
         product = service.list_products()[0]
+        started = time.perf_counter()
+        for i in range(args.orders):
+            service.create_order({'customer':f'Prueba {i}', 'priority':int(i%7==0),
+                                  'items':[{'product_id':product['id'],'quantity':1}]})
+        elapsed = time.perf_counter()-started
+        started = time.perf_counter()
+        record = service.process_next_order()
+        process_ms = (time.perf_counter()-started)*1000
+        started = time.perf_counter()
+        status = service.status()
+        status_ms = (time.perf_counter()-started)*1000
+        size = service.db_path.stat().st_size/1024
+        print(f'Pedidos creados: {args.orders:,}')
+        print(f'Registro total: {elapsed:.3f} s')
+        print(f'Registro promedio: {(elapsed/args.orders)*1000:.4f} ms/pedido')
+        print(f'Preparar un pedido con {args.orders:,} en memoria: {process_ms:.4f} ms ({record["code"]})')
+        print(f'Consultar contadores: {status_ms:.4f} ms | Pendientes: {status["orders_pending"]:,}')
+        print(f'Tamaño base SQLite principal: {size:.1f} KiB (WAL temporal no incluido)')
+        print('Resultados orientativos; dependen del disco, CPU, SO y condiciones de ejecución.')
+        service._db.close()
 
-        start = time.perf_counter()
-        for index in range(args.orders):
-            service.create_order(
-                {
-                    "customer": f"Benchmark {index}",
-                    "priority": 2 if index % 10 == 0 else 0,
-                    "items": [{"product_id": product["id"], "quantity": 1}],
-                }
-            )
-        elapsed = time.perf_counter() - start
-        size_kib = state_path.stat().st_size / 1024
 
-        print(f"Pedidos: {args.orders}")
-        print(f"Tiempo total: {elapsed:.3f} s")
-        print(f"Promedio: {elapsed / args.orders * 1000:.3f} ms/pedido")
-        print(f"Archivo JSON: {size_kib:.1f} KiB")
-        print("Nota: los resultados dependen de CPU, disco, sistema operativo y carga del equipo.")
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
