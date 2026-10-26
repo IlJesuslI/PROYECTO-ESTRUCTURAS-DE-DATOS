@@ -8,6 +8,6 @@
 6. Consultar cola Alta y Normal mediante índices de cabeza.
 7. Procesar el siguiente con política 3 altos por 1 normal cuando corresponda.
 8. Apilar preparados en historial.
-9. Borrar registros del historial, individual o totalmente.
+9. Borrar exclusivamente el último registro del historial (pila LIFO).
 10. Consultar estadísticas, pendientes e historial con límites.
 11. Ejecutar pruebas y benchmark para comprobar funcionalidad y rendimiento.

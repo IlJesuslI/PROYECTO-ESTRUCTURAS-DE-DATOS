@@ -430,41 +430,25 @@ class FoodQueueService:
             self._persist(order=order)
             return order.to_dict()
 
-    # ----- Historial: solo BORRAR, sin deshacer -----
-    def delete_history_order(self, order_id: str) -> dict[str, Any]:
-        """Elimina definitivamente un pedido preparado (memoria y JSONL)."""
+    # ----- Historial: pila LIFO, solo se borra el último preparado -----
+    def delete_last_history_order(self) -> dict[str, Any]:
+        """Extrae solo la cima de la pila de preparados; O(1) amortizado."""
         with self._lock:
-            order = self.orders.get(order_id)
-            if order is None:
-                raise NotFoundError('Pedido no encontrado.')
-            if order.status != 'prepared':
-                raise ConflictError('Solo pueden borrarse pedidos preparados del historial.')
+            # Compatibilidad con historiales antiguos que tenían borrados arbitrarios.
+            while self.prepared_stack and (self.prepared_stack[-1] not in self.orders or
+                    self.orders[self.prepared_stack[-1]].status != 'prepared'):
+                self.prepared_stack.pop()
+            if not self.prepared_stack:
+                raise NotFoundError('No hay pedidos preparados para borrar.')
+            order_id = self.prepared_stack[-1]
+            order = self.orders[order_id]
             self._append_event({'action': 'delete', 'id': order_id})
+            self.prepared_stack.pop()
             del self.orders[order_id]
             self._queue_positions.pop(order_id, None)
             self._stack_positions.pop(order_id, None)
             self._counts['prepared'] -= 1
-            # La pila conserva una referencia obsoleta (tombstone), para no recorrerla.
-            # Se compacta ocasionalmente, amortizando el coste.
-            if len(self.prepared_stack) > 256 and len(self.prepared_stack) > self._counts['prepared'] * 2:
-                self.prepared_stack = [oid for oid in self.prepared_stack if oid in self.orders
-                                       and self.orders[oid].status == 'prepared']
             return order.to_dict()
-
-    def clear_history(self) -> int:
-        """Borrado masivo explícito, O(h). No afecta pedidos pendientes o cancelados."""
-        with self._lock:
-            to_delete = [oid for oid in self.prepared_stack if oid in self.orders
-                         and self.orders[oid].status == 'prepared']
-            self._append_event({'action': 'clear'})
-            for oid in to_delete:
-                self.orders.pop(oid, None)
-                self._queue_positions.pop(oid, None)
-                self._stack_positions.pop(oid, None)
-            deleted = self._counts['prepared']
-            self._counts['prepared'] = 0
-            self.prepared_stack.clear()
-            return deleted
 
     def list_pending_orders(self, limit: int = 60) -> list[dict[str, Any]]:
         """Lee hasta k pendientes por arreglo, sin ordenar ni recorrer todo el historial."""

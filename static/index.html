@@ -74,8 +74,8 @@
       <section class="tab-panel" id="history" aria-labelledby="historyHeading">
         <div class="section-heading"><div><p class="overline">REGISTROS</p><h2 id="historyHeading">Historial de preparados</h2></div></div>
         <article class="surface history-section">
-          <div class="surface-heading between"><div class="surface-title"><div class="heading-symbol heading-symbol-green">◷</div><div><h3>Últimos pedidos preparados</h3><p>El historial se presenta desde el más reciente.</p></div></div><button id="clearHistory" class="btn btn-danger-outline" type="button">🗑 Borrar historial</button></div>
-          <div class="delete-note"><span class="info-circle">!</span> Eliminar es irreversible. Puedes borrar un registro individual o todo el historial; los pedidos pendientes no se modifican.</div>
+          <div class="surface-heading between"><div class="surface-title"><div class="heading-symbol heading-symbol-green">◷</div><div><h3>Últimos pedidos preparados</h3><p>El historial se presenta desde el más reciente.</p></div></div><button id="clearHistory" class="btn btn-danger-outline" type="button">🗑 Borrar último</button></div>
+          <div class="delete-note"><span class="info-circle">!</span> Solo se puede borrar el último pedido preparado (LIFO). La eliminación es irreversible y no modifica los pedidos pendientes.</div>
           <div id="historyList" class="order-list history-grid"></div>
           <div class="pagination"><span id="historyCounter">0 registros</span><button id="loadMoreHistory" class="btn btn-outline" type="button" hidden>Ver más pedidos</button></div>
         </article>

@@ -161,12 +161,8 @@ class FoodQueueHandler(BaseHTTPRequestHandler):
     def do_DELETE(self) -> None:  # noqa: N802
         path = urlparse(self.path).path.rstrip("/")
         try:
-            if path == "/api/history":
-                count = SERVICE.clear_history()
-                self._json(HTTPStatus.OK, {"ok": True, "data": {"deleted": count}})
-                return
-            if match := re.fullmatch(r"/api/history/([0-9a-f-]+)", path):
-                result = SERVICE.delete_history_order(match.group(1))
+            if path == "/api/history/last":
+                result = SERVICE.delete_last_history_order()
                 self._json(HTTPStatus.OK, {"ok": True, "data": result})
                 return
             match = re.fullmatch(r"/api/products/([0-9a-f-]+)", path)
