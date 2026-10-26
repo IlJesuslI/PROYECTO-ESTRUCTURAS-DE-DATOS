@@ -1,4 +1,4 @@
-"""Benchmark repetible: registro masivo y extracción individual con SQLite.
+"""Benchmark repetible: registro masivo y extracción individual con JSONL.
 
 Uso: python benchmark.py 100000
 La duración en Windows puede ser diferente a otros sistemas.
@@ -31,15 +31,14 @@ def main():
         started = time.perf_counter()
         status = service.status()
         status_ms = (time.perf_counter()-started)*1000
-        size = service.db_path.stat().st_size/1024
+        size = service.log_path.stat().st_size/1024
         print(f'Pedidos creados: {args.orders:,}')
         print(f'Registro total: {elapsed:.3f} s')
         print(f'Registro promedio: {(elapsed/args.orders)*1000:.4f} ms/pedido')
         print(f'Preparar un pedido con {args.orders:,} en memoria: {process_ms:.4f} ms ({record["code"]})')
         print(f'Consultar contadores: {status_ms:.4f} ms | Pendientes: {status["orders_pending"]:,}')
-        print(f'Tamaño base SQLite principal: {size:.1f} KiB (WAL temporal no incluido)')
+        print(f'Tamaño diario JSONL: {size:.1f} KiB')
         print('Resultados orientativos; dependen del disco, CPU, SO y condiciones de ejecución.')
-        service._db.close()
 
 
 if __name__ == '__main__':

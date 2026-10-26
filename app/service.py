@@ -1,12 +1,12 @@
 """FoodQueue: catálogo dinámico, dos colas sobre arreglos y pila histórica.
 
 Encolado / extracción: O(1) amortizado, sin recorrer toda la cola.
-Persistencia incremental: SQLite; lectura de historial paginada e indexada.
+Persistencia incremental: JSON Lines (JSONL); sin SQLite.
 """
 from __future__ import annotations
 
 import json
-import sqlite3
+import os
 import threading
 import uuid
 from pathlib import Path
@@ -75,7 +75,7 @@ class FoodQueueService:
     def __init__(self, state_path: str | Path):
         self.state_path = Path(state_path)
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
-        self.db_path = self.state_path.with_suffix('.sqlite3')
+        self.log_path = self.state_path.with_suffix('.jsonl')
         self._lock = threading.RLock()
         self.products: list[Product] = []          # arreglo dinámico
         self._product_index: dict[str, Product] = {}
@@ -125,7 +125,7 @@ class FoodQueueService:
             old_priority_ids = [str(entry[2]) for entry in data.get('priority_queue', [])
                                 if len(entry) == 3 and str(entry[2]) in self.orders
                                 and self.orders[str(entry[2])].status == 'pending']
-            high_ids = sorted(set(old_priority_ids), key=lambda oid: self.orders[oid].number)
+            high_ids = sorted(set(old_priority_ids + [oid for oid in data.get('high_queue', []) if oid in self.orders]), key=lambda oid: self.orders[oid].number)
             stack_ids = [oid for oid in data.get('prepared_stack', [])
                          if oid in self.orders and self.orders[oid].status == 'prepared']
         else:
@@ -154,133 +154,118 @@ class FoodQueueService:
         self._calculate_counts()
 
     def _load(self) -> None:
-        is_new = not self.db_path.exists()
-        self._db = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
-        self._db.execute('PRAGMA journal_mode=WAL')
-        self._db.execute('PRAGMA busy_timeout=30000')
-        self._db.executescript('''
-            CREATE TABLE IF NOT EXISTS products (
-                id TEXT PRIMARY KEY, payload TEXT NOT NULL, position INTEGER NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS orders (
-                id TEXT PRIMARY KEY, number INTEGER NOT NULL UNIQUE,
-                status TEXT NOT NULL, priority INTEGER NOT NULL,
-                queue_seq INTEGER, stack_seq INTEGER, payload TEXT NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_orders_pending
-                ON orders(status, priority, queue_seq, number);
-            CREATE INDEX IF NOT EXISTS idx_orders_prepared
-                ON orders(status, stack_seq DESC);
-            CREATE TABLE IF NOT EXISTS metadata (
-                key TEXT PRIMARY KEY, value INTEGER NOT NULL
-            );
-        ''')
-        if is_new:
-            if self.state_path.exists():
-                self._load_legacy_json()
-            else:
-                self._seed_demo_menu()
-            self._persist_all()
-            return
+        """Carga instantánea inicial + reproduce el diario incremental JSONL.
 
-        # Una sola migración: prioridad 2 (urgente) pasa a 1 (alta), también en el JSON.
-        meta = dict(self._db.execute('SELECT key, value FROM metadata'))
-        if meta.get('schema_version', 2) < 3:
-            with self._db:
-                for oid, raw in self._db.execute('SELECT id,payload FROM orders WHERE priority > 1').fetchall():
-                    obj = json.loads(raw)
-                    obj['priority'] = 1
-                    self._db.execute('UPDATE orders SET priority=1,payload=? WHERE id=?',
-                                     (json.dumps(obj, ensure_ascii=False, separators=(',', ':')), oid))
-                # En v2 los pedidos altos de heapq no tenían queue_seq.
-                # Asignar una secuencia a los históricos ANTES de registrar nuevos,
-                # para no cambiar su orden tras el siguiente reinicio.
-                next_seq = max(int(meta.get('queue_counter', 0)),
-                               int(self._db.execute('SELECT COALESCE(MAX(queue_seq),0) FROM orders').fetchone()[0]))
-                for (oid,) in self._db.execute("""SELECT id FROM orders
-                        WHERE status='pending' AND queue_seq IS NULL
-                        ORDER BY number""").fetchall():
-                    next_seq += 1
-                    self._db.execute('UPDATE orders SET queue_seq=? WHERE id=?', (next_seq, oid))
-                self._db.execute('INSERT OR REPLACE INTO metadata VALUES (?,?)', ('queue_counter', next_seq))
-                self._db.execute('INSERT OR REPLACE INTO metadata VALUES (?,?)', ('schema_version', 3))
-            meta['schema_version'] = 3
-            meta['queue_counter'] = next_seq
-
-        self.products = [Product(**json.loads(p)) for (p,) in
-                         self._db.execute('SELECT payload FROM products ORDER BY position')]
-        self._rebuild_product_index()
-        normal_entries: list[tuple[int, int, str]] = []
-        high_entries: list[tuple[int, int, str]] = []
-        stack_entries: list[tuple[int, int, str]] = []
-        for oid, status, priority, queue_seq, stack_seq, raw in self._db.execute(
-                'SELECT id,status,priority,queue_seq,stack_seq,payload FROM orders'):
-            o = Order.from_dict(json.loads(raw))
-            o.priority = 1 if o.priority > 0 else 0
-            self.orders[oid] = o
-            if status == 'pending':
-                entry = (queue_seq if queue_seq is not None else o.number, o.number, oid)
-                (high_entries if o.priority else normal_entries).append(entry)
-            elif status == 'prepared':
-                stack_entries.append((stack_seq if stack_seq is not None else o.number, o.number, oid))
-            if queue_seq is not None:
-                self._queue_positions[oid] = queue_seq
-            if stack_seq is not None:
-                self._stack_positions[oid] = stack_seq
-        self.normal_queue = ArrayQueue(self.orders[oid] for _, _, oid in sorted(normal_entries))
-        self.high_queue = ArrayQueue(self.orders[oid] for _, _, oid in sorted(high_entries))
-        self.prepared_stack = [oid for _, _, oid in sorted(stack_entries)]
-        self.next_order_number = max(meta.get('next_order_number', 1),
+        No abre bases SQL. Si hay un JSON legado, respeta el orden de sus colas.
+        El diario puede crecer; la reconstrucción de arranque es O(n + e).
+        """
+        if self.state_path.exists():
+            self._load_legacy_json()
+        else:
+            if self.state_path.with_suffix('.sqlite3').exists():
+                raise RuntimeError('Se encontró una base de datos anterior. Haz una copia y exporta los pedidos a JSON antes de iniciar la versión JSONL; no se creará un menú vacío sobre datos existentes.')
+            self._seed_demo_menu()
+            self._snapshot()
+        if self.log_path.exists():
+            with self.log_path.open('r', encoding='utf-8') as stream:
+                for line in stream:
+                    if not line.strip():
+                        continue
+                    try:
+                        event = json.loads(line)
+                    except json.JSONDecodeError:
+                        # Una última línea truncada tras apagado se ignora.
+                        break
+                    action = event['action']
+                    if action == 'product':
+                        product = Product(**event['product'])
+                        if product.id not in self._product_index:
+                            self.products.append(product)
+                        else:
+                            for idx, current in enumerate(self.products):
+                                if current.id == product.id:
+                                    self.products[idx] = product
+                                    break
+                        self._product_index[product.id] = product
+                    elif action == 'order':
+                        order = Order.from_dict(event['order'])
+                        order.priority = 1 if order.priority > 0 else 0
+                        self.orders[order.id] = order
+                        if order.status == 'pending':
+                            self._queue_positions[order.id] = int(event['queue_seq'])
+                        elif order.status == 'prepared':
+                            self._queue_positions.pop(order.id, None)
+                            self._stack_positions[order.id] = int(event['stack_seq'])
+                        else:
+                            self._queue_positions.pop(order.id, None)
+                    elif action == 'delete':
+                        oid = event['id']
+                        self.orders.pop(oid, None)
+                        self._queue_positions.pop(oid, None)
+                        self._stack_positions.pop(oid, None)
+                    elif action == 'clear':
+                        for oid, order in list(self.orders.items()):
+                            if order.status == 'prepared':
+                                del self.orders[oid]
+                                self._stack_positions.pop(oid, None)
+                    self.next_order_number = max(self.next_order_number, int(event.get('next_order_number', 1)))
+                    self._consecutive_priority = int(event.get('consecutive_priority', 0))
+                    self._queue_counter = max(self._queue_counter, int(event.get('queue_counter', 0)))
+                    self._stack_counter = max(self._stack_counter, int(event.get('stack_counter', 0)))
+        # La reconstrucción usa índices de orden, sin ordenar cada vez que se atiende.
+        pending = [o for o in self.orders.values() if o.status == 'pending']
+        normal = sorted((o for o in pending if o.priority == 0),
+                        key=lambda o: (self._queue_positions.get(o.id, o.number), o.number))
+        high = sorted((o for o in pending if o.priority == 1),
+                      key=lambda o: (self._queue_positions.get(o.id, o.number), o.number))
+        self.normal_queue = ArrayQueue(normal)
+        self.high_queue = ArrayQueue(high)
+        self.prepared_stack = [o.id for o in sorted(
+            (o for o in self.orders.values() if o.status == 'prepared'),
+            key=lambda o: (self._stack_positions.get(o.id, o.number), o.number))]
+        self._queue_counter = max(self._queue_counter, max(self._queue_positions.values(), default=0))
+        self._stack_counter = max(self._stack_counter, max(self._stack_positions.values(), default=0))
+        self.next_order_number = max(self.next_order_number,
                                      max((o.number for o in self.orders.values()), default=0) + 1)
-        self._consecutive_priority = meta.get('consecutive_priority', 0)
-        self._queue_counter = max(meta.get('queue_counter', 0),
-                                  max(self._queue_positions.values(), default=0))
-        self._stack_counter = max(meta.get('stack_counter', 0),
-                                  max(self._stack_positions.values(), default=0))
         self._calculate_counts()
 
     def _calculate_counts(self) -> None:
         self._counts = {'normal': 0, 'high': 0, 'prepared': 0, 'cancelled': 0}
-        for o in self.orders.values():
-            if o.status == 'pending':
-                self._counts['high' if o.priority else 'normal'] += 1
-            elif o.status in self._counts:
-                self._counts[o.status] += 1
+        for order in self.orders.values():
+            if order.status == 'pending':
+                self._counts['high' if order.priority else 'normal'] += 1
+            elif order.status in self._counts:
+                self._counts[order.status] += 1
 
-    def _write_order(self, order: Order) -> None:
-        self._db.execute('''INSERT OR REPLACE INTO orders
-            (id, number, status, priority, queue_seq, stack_seq, payload)
-            VALUES (?,?,?,?,?,?,?)''',
-            (order.id, order.number, order.status, order.priority,
-             self._queue_positions.get(order.id), self._stack_positions.get(order.id),
-             json.dumps(order.to_dict(), ensure_ascii=False, separators=(',', ':'))))
+    def _snapshot(self) -> None:
+        """Crea el estado base una sola vez; no se reescribe por pedido."""
+        state = {'version': 3, 'products': [p.to_dict() for p in self.products],
+                 'orders': [o.to_dict() for o in self.orders.values()],
+                 'normal_queue': [o.id for o in self.normal_queue.items[self.normal_queue.head:]
+                                  if o.status == 'pending'],
+                 'high_queue': [o.id for o in self.high_queue.items[self.high_queue.head:]
+                                if o.status == 'pending'],
+                 'prepared_stack': [oid for oid in self.prepared_stack if oid in self.orders],
+                 'next_order_number': self.next_order_number,
+                 'consecutive_priority': self._consecutive_priority}
+        temp = self.state_path.with_suffix('.json.tmp')
+        temp.write_text(json.dumps(state, ensure_ascii=False), encoding='utf-8')
+        os.replace(temp, self.state_path)
 
-    def _write_meta(self) -> None:
-        self._db.executemany('INSERT OR REPLACE INTO metadata VALUES (?,?)', (
-            ('schema_version', 3), ('next_order_number', self.next_order_number),
-            ('consecutive_priority', self._consecutive_priority),
-            ('queue_counter', self._queue_counter), ('stack_counter', self._stack_counter)
-        ))
-
-    def _persist_all(self) -> None:
-        with self._db:
-            for position, p in enumerate(self.products):
-                self._db.execute('INSERT OR REPLACE INTO products VALUES (?,?,?)',
-                                 (p.id, json.dumps(p.to_dict(), ensure_ascii=False), position))
-            for o in self.orders.values():
-                self._write_order(o)
-            self._write_meta()
+    def _append_event(self, event: dict[str, Any]) -> None:
+        event.update(next_order_number=self.next_order_number,
+                     consecutive_priority=self._consecutive_priority,
+                     queue_counter=self._queue_counter, stack_counter=self._stack_counter)
+        with self.log_path.open('a', encoding='utf-8') as stream:
+            stream.write(json.dumps(event, ensure_ascii=False, separators=(',', ':')) + '\n')
 
     def _persist(self, *, order: Order | None = None, product: Product | None = None) -> None:
-        with self._db:
-            if order is not None:
-                self._write_order(order)
-            if product is not None:
-                # Solo catálogo: búsqueda de posición O(m), no depende de n pedidos.
-                position = next(i for i, p in enumerate(self.products) if p.id == product.id)
-                self._db.execute('INSERT OR REPLACE INTO products VALUES (?,?,?)',
-                                 (product.id, json.dumps(product.to_dict(), ensure_ascii=False), position))
-            self._write_meta()
+        if order is not None:
+            self._append_event({'action': 'order', 'order': order.to_dict(),
+                                'queue_seq': self._queue_positions.get(order.id),
+                                'stack_seq': self._stack_positions.get(order.id)})
+        if product is not None:
+            self._append_event({'action': 'product', 'product': product.to_dict()})
 
     # ----- Validación -----
     @staticmethod
@@ -447,15 +432,14 @@ class FoodQueueService:
 
     # ----- Historial: solo BORRAR, sin deshacer -----
     def delete_history_order(self, order_id: str) -> dict[str, Any]:
-        """Elimina definitivamente un pedido preparado (memoria y SQLite)."""
+        """Elimina definitivamente un pedido preparado (memoria y JSONL)."""
         with self._lock:
             order = self.orders.get(order_id)
             if order is None:
                 raise NotFoundError('Pedido no encontrado.')
             if order.status != 'prepared':
                 raise ConflictError('Solo pueden borrarse pedidos preparados del historial.')
-            with self._db:
-                self._db.execute('DELETE FROM orders WHERE id=? AND status=?', (order_id, 'prepared'))
+            self._append_event({'action': 'delete', 'id': order_id})
             del self.orders[order_id]
             self._queue_positions.pop(order_id, None)
             self._stack_positions.pop(order_id, None)
@@ -472,8 +456,7 @@ class FoodQueueService:
         with self._lock:
             to_delete = [oid for oid in self.prepared_stack if oid in self.orders
                          and self.orders[oid].status == 'prepared']
-            with self._db:
-                self._db.execute("DELETE FROM orders WHERE status='prepared'")
+            self._append_event({'action': 'clear'})
             for oid in to_delete:
                 self.orders.pop(oid, None)
                 self._queue_positions.pop(oid, None)
@@ -484,34 +467,47 @@ class FoodQueueService:
             return deleted
 
     def list_pending_orders(self, limit: int = 60) -> list[dict[str, Any]]:
-        """Solo primeras k entradas de cada prioridad usando índice SQL; no ordena n pedidos."""
+        """Lee hasta k pendientes por arreglo, sin ordenar ni recorrer todo el historial."""
         with self._lock:
             limit = self._parse_int(limit, 'Límite', 1, 200)
-            def read(priority: int) -> list[dict[str, Any]]:
-                rows = self._db.execute('''SELECT payload FROM orders
-                    WHERE status='pending' AND priority=?
-                    ORDER BY queue_seq, number LIMIT ?''', (priority, limit))
-                return [json.loads(raw) for (raw,) in rows]
-            highs, normals = read(1), read(0)
-            hi = no = 0
+            def active(queue: ArrayQueue):
+                count = 0
+                for order in queue.items[queue.head:]:
+                    if order.status == 'pending':
+                        yield order
+                        count += 1
+                        if count >= limit:
+                            break
+            highs = iter(active(self.high_queue))
+            normals = iter(active(self.normal_queue))
+            high = next(highs, None)
+            normal = next(normals, None)
             streak = self._consecutive_priority
-            result: list[dict[str, Any]] = []
-            while len(result) < limit and (hi < len(highs) or no < len(normals)):
-                if hi < len(highs) and (no >= len(normals) or streak < self.MAX_CONSECUTIVE_PRIORITY):
-                    result.append(highs[hi]); hi += 1; streak += 1
-                elif no < len(normals):
-                    result.append(normals[no]); no += 1; streak = 0
+            result = []
+            while len(result) < limit and (high is not None or normal is not None):
+                if high is not None and (normal is None or streak < self.MAX_CONSECUTIVE_PRIORITY):
+                    result.append(high.to_dict()); high = next(highs, None); streak += 1
                 else:
-                    break
+                    result.append(normal.to_dict()); normal = next(normals, None); streak = 0
             return result
 
     def list_history(self, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         with self._lock:
             limit = self._parse_int(limit, 'Límite', 1, 200)
             offset = self._parse_int(offset, 'Desplazamiento', 0, 10_000_000)
-            rows = self._db.execute('''SELECT payload FROM orders WHERE status='prepared'
-                ORDER BY stack_seq DESC LIMIT ? OFFSET ?''', (limit, offset))
-            return [json.loads(raw) for (raw,) in rows]
+            result = []
+            skipped = 0
+            for oid in reversed(self.prepared_stack):
+                order = self.orders.get(oid)
+                if order is None or order.status != 'prepared':
+                    continue
+                if skipped < offset:
+                    skipped += 1
+                    continue
+                result.append(order.to_dict())
+                if len(result) >= limit:
+                    break
+            return result
 
     def status(self) -> dict[str, Any]:
         with self._lock:

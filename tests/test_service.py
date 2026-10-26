@@ -1,6 +1,5 @@
 """Pruebas funcionales, integridad, migración y complejidad de FoodQueue v3."""
 import json
-import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -16,7 +15,6 @@ class FoodQueueServiceTests(unittest.TestCase):
         self.product = self.service.list_products()[0]
 
     def tearDown(self):
-        self.service._db.close()
         self.tmp.cleanup()
 
     def make_order(self, customer='Cliente', priority=0, quantity=1):
@@ -116,7 +114,7 @@ class FoodQueueServiceTests(unittest.TestCase):
             self.assertEqual([another.process_next_order()['id'] for _ in range(4)],
                              [h1['id'], h2['id'], n1['id'], n2['id']])
         finally:
-            another._db.close()
+            pass
 
     def test_restart_preserves_deletion(self):
         a = self.make_order('A'); self.service.process_next_order()
@@ -126,7 +124,7 @@ class FoodQueueServiceTests(unittest.TestCase):
             self.assertEqual(another.list_history(), [])
             self.assertEqual(another.status()['orders_prepared'], 0)
         finally:
-            another._db.close()
+            pass
 
     def test_history_pagination(self):
         for i in range(12):
@@ -169,27 +167,15 @@ class FoodQueueServiceTests(unittest.TestCase):
 
 
 class MigrationTests(unittest.TestCase):
-    def test_sqlite_priority_2_is_migrated(self):
+    def test_jsonl_replay_priority_and_restart(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'state.json'
             service = FoodQueueService(path)
             pid = service.list_products()[0]['id']
-            data = service.create_order({'customer':'Old','priority':1,
-                                         'items':[{'product_id':pid,'quantity':1}]})
-            with service._db:
-                raw = json.loads(service._db.execute('SELECT payload FROM orders WHERE id=?', (data['id'],)).fetchone()[0])
-                raw['priority'] = 2
-                service._db.execute('UPDATE orders SET priority=2,payload=? WHERE id=?',
-                                    (json.dumps(raw),data['id']))
-                service._db.execute('UPDATE metadata SET value=2 WHERE key=?',('schema_version',))
-            service._db.close()
-            new = FoodQueueService(path)
-            try:
-                self.assertEqual(new.process_next_order()['priority'], 1)
-                self.assertEqual(new._db.execute('SELECT priority FROM orders WHERE id=?',
-                                 (data['id'],)).fetchone()[0], 1)
-            finally:
-                new._db.close()
+            order = service.create_order({'customer': 'Old', 'priority': 1,
+                                          'items': [{'product_id': pid, 'quantity': 1}]})
+            restarted = FoodQueueService(path)
+            self.assertEqual(restarted.process_next_order()['id'], order['id'])
 
     def test_json_priority_heap_migration(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -203,14 +189,14 @@ class MigrationTests(unittest.TestCase):
                 'normal_queue':[],
                 'priority_queue':[[-2,2,orders[1]['id']],[-1,1,orders[0]['id']],[-1,3,orders[2]['id']]],
                 'prepared_stack':[]}
-            seed._db.close(); path.with_suffix('.sqlite3').unlink()
+            path.with_suffix('.jsonl').unlink()
             path.write_text(json.dumps(legacy), encoding='utf-8')
             new = FoodQueueService(path)
             try:
                 self.assertEqual([new.process_next_order()['id'] for _ in range(3)],
                                  [o['id'] for o in orders])
             finally:
-                new._db.close()
+                pass
 
 
 if __name__ == '__main__':
