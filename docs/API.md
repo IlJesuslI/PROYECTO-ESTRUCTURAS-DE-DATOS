@@ -25,8 +25,7 @@ Errores:
 | POST | `/api/orders/process-next` | Preparar el siguiente |
 | POST | `/api/orders/{uuid}/cancel` | Cancelar pendiente |
 | GET | `/api/history?limit=30&offset=0` | Consultar histórico paginado (limit 1–200) |
-| DELETE | `/api/history/{uuid}` | **Borrar definitivamente** un preparado |
-| DELETE | `/api/history` | **Borrar todos** los preparados |
+| DELETE | `/api/history/last` | **Borrar únicamente el último preparado** (cima de la pila LIFO) |
 
 **El endpoint `POST /api/history/undo` fue eliminado.** Clientes viejos recibirán HTTP 404.
 
@@ -61,7 +60,7 @@ Content-Type: application/json
 }
 ```
 
-`stack_size` indica preparados **vivos**, no entradas obsoletas del buffer interno tras borrar. Los números anteriores son solo ejemplos.
+`stack_size` indica preparados **vivos**. El borrado afecta exclusivamente a la cima de la pila. Los números anteriores son solo ejemplos.
 
 ## Códigos de respuesta
 

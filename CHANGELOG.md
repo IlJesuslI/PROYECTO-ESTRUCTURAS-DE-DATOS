@@ -1,3 +1,9 @@
+## v4.1 — Historial LIFO estricto
+- Solo se permite borrar el último pedido preparado.
+- Eliminados borrado arbitrario y borrado masivo del historial.
+- API: DELETE /api/history/last.
+- Pruebas y documentación actualizadas.
+
 # Registro de cambios
 
 ## v4.0 — Sin SQL

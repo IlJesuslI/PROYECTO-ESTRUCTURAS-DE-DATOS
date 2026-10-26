@@ -83,28 +83,25 @@ class FoodQueueServiceTests(unittest.TestCase):
         self.service.process_next_order(); self.service.process_next_order()
         self.assertEqual([o['id'] for o in self.service.list_history()], [b['id'], a['id']])
 
-    def test_delete_single_prepared(self):
+    def test_delete_only_last_prepared_lifo(self):
         a = self.make_order('A'); b = self.make_order('B')
         self.service.process_next_order(); self.service.process_next_order()
-        deleted = self.service.delete_history_order(a['id'])
-        self.assertEqual(deleted['id'], a['id'])
-        self.assertEqual([o['id'] for o in self.service.list_history()], [b['id']])
-        self.assertEqual(self.service.status()['orders_prepared'], 1)
+        self.assertEqual(self.service.delete_last_history_order()['id'], b['id'])
+        self.assertEqual([o['id'] for o in self.service.list_history()], [a['id']])
+        self.assertEqual(self.service.delete_last_history_order()['id'], a['id'])
         with self.assertRaises(NotFoundError):
-            self.service.delete_history_order(a['id'])
+            self.service.delete_last_history_order()
 
-    def test_cannot_delete_pending_from_history(self):
-        a = self.make_order('A')
-        with self.assertRaises(ConflictError):
-            self.service.delete_history_order(a['id'])
-
-    def test_clear_only_prepared(self):
+    def test_deleting_last_does_not_affect_pending(self):
         a = self.make_order('A'); b = self.make_order('B')
         self.service.process_next_order()
-        self.assertEqual(self.service.clear_history(), 1)
-        self.assertEqual(self.service.list_history(), [])
+        self.assertEqual(self.service.delete_last_history_order()['id'], a['id'])
         self.assertEqual(self.service.status()['orders_pending'], 1)
         self.assertEqual(self.service.process_next_order()['id'], b['id'])
+
+    def test_no_arbitrary_or_bulk_deletion(self):
+        self.assertFalse(hasattr(self.service, 'delete_history_order'))
+        self.assertFalse(hasattr(self.service, 'clear_history'))
 
     def test_restart_preserves_queue_order(self):
         n1 = self.make_order('N1'); n2 = self.make_order('N2')
@@ -118,7 +115,7 @@ class FoodQueueServiceTests(unittest.TestCase):
 
     def test_restart_preserves_deletion(self):
         a = self.make_order('A'); self.service.process_next_order()
-        self.service.delete_history_order(a['id'])
+        self.service.delete_last_history_order()
         another = FoodQueueService(self.path)
         try:
             self.assertEqual(another.list_history(), [])
