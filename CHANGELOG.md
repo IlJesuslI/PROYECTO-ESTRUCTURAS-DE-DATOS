@@ -1,16 +1,10 @@
-# Historial de versiones
+# Registro de cambios
 
-## v3.0 — Prioridad implementada con arreglos
+## v4.0 — Sin SQL
+- Eliminado el uso de SQLite del servicio, las pruebas y el benchmark.
+- Persistencia mediante archivo JSON inicial y diario JSONL incremental.
+- Conservadas dos prioridades, dos arreglos con índices de cabeza, pila de historial y borrado.
+- Actualizada la documentación y las advertencias de migración.
 
-- Remplazado `heapq` por `ArrayQueue` con `list` + `head`.
-- Dos colas independientes: Normal (`0`) y Alta (`1`).
-- Eliminación de Urgente (`2`), migración automática en SQLite y JSON.
-- Eliminación total de operación y endpoint de deshacer.
-- Nuevos endpoints DELETE de historial individual y completo.
-- Datos paginados, consultas con índices SQLite, contadores en RAM.
-- Frontend renovado en diseño y navegación (Pedidos / Menú / Historial).
-- 24 pruebas y documentos técnicos reescritos con análisis de complejidad.
-
-## v2.x — Optimización SQLite anterior
-
-- Persistencia incremental SQLite, prioridad Normal/Alta/Urgente y cola `heapq`.
+## v3.0
+- Dos colas por arreglos, prioridades Alta/Normal y rediseño de interfaz.
