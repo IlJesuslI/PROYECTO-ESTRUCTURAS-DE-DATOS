@@ -1,6 +1,8 @@
-# FoodQueue v4 — Sin base de datos SQL
+# FoodQueue
 
-Sistema local de pedidos de restaurante, construido con **Python 3.10+**, HTML, CSS y JavaScript. **No utiliza SQLite ni ninguna base de datos SQL**; conserva información en un archivo JSON inicial y un diario incremental JSONL.
+Nuestro sistema consiste en una aplicación web local que permite gestionar las funciones básicas de un restaurante, como administrar el menú y registrar pedidos con diferentes productos, cantidades y prioridades. Emplea estructuras de datos como **arreglos dinámicos, colas FIFO, colas con prioridad y pilas**. Además, evita que los pedidos normales sean desatendidos frente a los prioritarios, permite consultar el historial y deshacer el último pedido preparado.
+- Interfaz hecha en JavaScript, HTML y CSS.
+- Lógica y procesamiento con Python.
 
 ## Inicio rápido
 
@@ -22,14 +24,6 @@ Abre `http://127.0.0.1:8000`.
 - Guardado incremental en `data/state.jsonl`, una línea JSON por cambio, sin reescribir 100.000 registros en cada pedido.
 - Consulta limitada de pendientes e historial.
 
-## Persistencia
-
-- `data/state.json`: estado inicial o archivo heredado.
-- `data/state.jsonl`: eventos posteriores (creación, actualización, cancelación, preparación y borrado).
-- Ambos archivos deben conservarse **juntos** y están excluidos de Git.
-- Al reiniciar, el sistema reconstruye la memoria leyendo el JSON y reproduciendo el diario JSONL. El arranque empeora a medida que crece el diario; aún no se implementa compactación automática.
-- **Migración importante:** si tu instalación anterior contiene únicamente `state.sqlite3`, **no se importa automáticamente**. Haz copia de seguridad antes de sustituir la versión. Para conservar esos registros se necesita exportarlos a JSON desde la versión anterior.
-
 ## Complejidad principal
 
 | Operación | Costo de estructura en RAM | Persistencia |
@@ -47,10 +41,12 @@ Abre `http://127.0.0.1:8000`.
 
 `n` pedidos, `m` productos, `h` historial, `k` elementos solicitados, `e` eventos. El costo de escritura en disco depende del sistema de archivos, buffer y dispositivo. El proceso mantiene O(n) pedidos en memoria.
 
-## Limitaciones
+## Porcentaje de IA
 
-El diario JSONL es adecuado para demostración y uso local, pero **no es una base transaccional multiusuario**. Un corte de energía puede dejar una última línea incompleta; se ignora al iniciar. Un fallo de escritura puede dejar la RAM y el disco desincronizados. No abras dos servidores sobre los mismos archivos. Realiza copias de seguridad con el servidor detenido. No publiques el servidor en internet sin autenticación.
+La versión entregada como base fue generada aproximadamente en **90 % con asistencia de inteligencia artificial** y en **10 % mediante definición/selección humana del problema, requisitos, validación y ajustes de presentación**.
 
-## Documentación
 
-Consulta `docs/` para manual, API, estructura de datos, complejidad, riesgos, entrega académica y guion del video.
+## Hecho por:
+- Jesus David Muñoz Gomez
+- Edwin Mauricio Cifuentes Monterrey
+- Jacobo Atahualpa Manrique Monroy
