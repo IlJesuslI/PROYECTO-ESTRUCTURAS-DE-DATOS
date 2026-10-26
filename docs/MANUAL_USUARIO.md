@@ -14,7 +14,7 @@ Python 3.10+ y navegador actualizado; no requiere `pip install`.
 2. **Nuevo pedido:** selecciona cliente, artículos, cantidades y prioridad **Normal** o **Alta**.
 3. **Pendientes:** se muestran según el turno efectivo de las dos colas.
 4. **Preparar siguiente:** procesa el primer pedido elegible; no recorre todos los pedidos.
-5. **Historial:** consulta los preparados y utiliza **Borrar** para eliminar registros; no existe **Deshacer**.
+5. **Historial:** consulta los preparados y utiliza **Borrar último** para eliminar exclusivamente el preparado más reciente (LIFO); no existe **Deshacer** ni borrado total.
 
 ## Archivos y respaldo
 Se utilizan `data/state.json` (base inicial) y `data/state.jsonl` (diario incremental). Conserva **ambos** archivos al actualizar. Para respaldarlos, detén el servidor y copia toda la carpeta `data/`. Estos archivos no se suben a GitHub.

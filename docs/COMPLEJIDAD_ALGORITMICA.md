@@ -15,8 +15,7 @@
 | Crear pedido | O(k) + O(1) amortizado para cola | O(k) |
 | Agregar producto | O(m) para validar nombre | O(1) |
 | Historial: apilar | O(1) amortizado | O(1) |
-| Borrar historial por ID | O(1) amortizado, con compactación ocasional O(h) | O(1) |
-| Borrar todo historial | O(h) | O(h) temporal |
+| Borrar último preparado (pop LIFO) | O(1) amortizado; puede saltar marcas antiguas | O(1) |
 | Mostrar k pendientes | O(k+c) | O(k) |
 | Historial paginado | O(offset+k+tombstones) | O(k) |
 | Estado / estadísticas | O(m) productos; contadores O(1) | O(1) |

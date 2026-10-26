@@ -18,7 +18,7 @@ Abre `http://127.0.0.1:8000`.
 - Dos prioridades: **Normal (0)** y **Alta (1)**, implementadas mediante **dos arreglos con índice de cabeza**, no con `heapq`.
 - Selección O(1) del arreglo a atender, con equidad: hasta tres pedidos altos consecutivos si hay normales esperando.
 - Cancelación por identificador, sin búsqueda lineal en la cola.
-- Historial de preparados en pila `list`, con opción **Borrar**, sin **Deshacer**.
+- Historial de preparados en pila `list`, con opción **Borrar último** (LIFO), sin **Deshacer** ni borrado total.
 - Guardado incremental en `data/state.jsonl`, una línea JSON por cambio, sin reescribir 100.000 registros en cada pedido.
 - Consulta limitada de pendientes e historial.
 
@@ -42,7 +42,7 @@ Abre `http://127.0.0.1:8000`.
 | Consultar estado | O(m) por productos activos; O(1) por contadores | — |
 | Listar k pendientes | O(k + c) con c cancelados saltados | — |
 | Historial, página de k tras offset | O(offset + k + tombstones) | — |
-| Borrar historial completo | O(h) | O(1) evento, más serialización |
+| Borrar último preparado | O(1) amortizado | O(b) por evento JSONL |
 | Reiniciar | O(n log n + e) por ordenar pedidos y reproducir e eventos | Lectura O(tamaño total de archivos) |
 
 `n` pedidos, `m` productos, `h` historial, `k` elementos solicitados, `e` eventos. El costo de escritura en disco depende del sistema de archivos, buffer y dispositivo. El proceso mantiene O(n) pedidos en memoria.

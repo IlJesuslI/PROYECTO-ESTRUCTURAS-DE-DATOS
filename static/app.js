@@ -129,17 +129,6 @@ function orderCard(order, mode) {
       } catch (error) { showToast(error.message, 'error'); }
     });
     bottom.append(button);
-  } else {
-    const button = el('button', 'btn btn-danger-text btn-small', '🗑 Borrar');
-    button.type = 'button';
-    button.addEventListener('click', async () => {
-      if (!confirm(`¿Borrar definitivamente ${order.code} del historial? Esta acción no se puede deshacer.`)) return;
-      try {
-        await api(`/api/history/${order.id}`, { method: 'DELETE' });
-        showToast(`${order.code} eliminado del historial.`); await refreshAll();
-      } catch (error) { showToast(error.message, 'error'); }
-    });
-    bottom.append(button);
   }
   card.append(top, items, bottom);
   return card;
@@ -217,10 +206,10 @@ $('#processNext').addEventListener('click', async () => {
   } catch (error) { showToast(error.message, 'error'); }
 });
 $('#clearHistory').addEventListener('click', async () => {
-  if (!confirm('¿BORRAR TODOS los pedidos preparados del historial? Esta acción es irreversible.')) return;
+  if (!confirm('¿Borrar únicamente el último pedido preparado? Esta acción es irreversible.')) return;
   try {
-    const result = await api('/api/history', { method: 'DELETE' });
-    showToast(`Se borraron ${result.deleted} pedidos del historial.`); await refreshAll();
+    const result = await api('/api/history/last', { method: 'DELETE' });
+    showToast(`${result.code} eliminado del historial.`); await refreshAll();
   } catch (error) { showToast(error.message, 'error'); }
 });
 $('#loadMoreHistory').addEventListener('click', async () => {
